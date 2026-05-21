@@ -79,9 +79,65 @@ body {
   margin-bottom: -2px;
 }
 
+/* ── YEAR TABS ── */
+.year-section {
+  padding: 16px 16px 0;
+}
+.year-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--muted);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  margin-bottom: 10px;
+}
+.year-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+.year-chip {
+  background: var(--white);
+  border: 1.5px solid var(--border);
+  color: var(--text);
+  padding: 8px 18px;
+  border-radius: 50px;
+  font-size: 14px;
+  font-weight: 700;
+  font-family: var(--font);
+  cursor: pointer;
+  transition: all 0.18s ease;
+  white-space: nowrap;
+  min-height: 40px;
+  display: flex; align-items: center;
+  letter-spacing: 0.5px;
+}
+.year-chip:active { transform: scale(0.96); }
+.year-chip.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+.year-chip.current-year {
+  position: relative;
+}
+.year-chip.current-year::after {
+  content: '최신';
+  position: absolute;
+  top: -7px; right: -2px;
+  background: var(--accent3);
+  color: #fff;
+  font-size: 9px;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 10px;
+  letter-spacing: 0.5px;
+}
+
 /* ── SEARCH SECTION ── */
 .search-section {
-  padding: 20px 16px 12px;
+  padding: 16px 16px 12px;
 }
 .search-label {
   font-size: 11px;
@@ -162,6 +218,23 @@ body {
 }
 .no-result-icon { font-size: 2.5rem; margin-bottom: 10px; }
 
+/* ── LOADING ── */
+.loading {
+  text-align: center;
+  padding: 60px 24px;
+  color: var(--muted);
+  font-size: 14px;
+}
+.loading-spinner {
+  width: 32px; height: 32px;
+  border: 3px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  margin: 0 auto 12px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
 /* ── RESULT ── */
 #result { display: none; padding: 0 16px 32px; }
 
@@ -198,6 +271,19 @@ body {
   color: rgba(255,255,255,0.5);
   font-size: 12px;
   margin-top: 4px;
+}
+
+/* ── YEAR BADGE in result ── */
+.year-badge {
+  display: inline-block;
+  background: var(--accent);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 9px;
+  border-radius: 4px;
+  letter-spacing: 0.5px;
+  margin-bottom: 12px;
 }
 
 /* ── GRADE TABS ── */
@@ -334,7 +420,6 @@ body {
 }
 .sum-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
 .sum-name { font-weight: 700; }
-.sum-auth { font-size: 11px; color: var(--muted); }
 
 /* ── LEGEND ── */
 .legend-section {
@@ -376,214 +461,268 @@ body {
 <body>
 
 <header class="header">
-  <div class="header-tag">2026학년도</div>
+  <div class="header-tag" id="headerTag">로딩 중...</div>
   <h1>부산 교과서<br>채택 현황</h1>
-  <p class="header-sub">금정구 · 9개 중학교 · 전 학년 전 과목</p>
+  <p class="header-sub" id="headerSub">데이터를 불러오는 중입니다</p>
   <svg class="header-wave" viewBox="0 0 390 28" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none">
     <path d="M0 0 C60 28 130 28 195 14 C260 0 330 0 390 14 L390 28 L0 28 Z" fill="#F5F3EE"/>
   </svg>
 </header>
 
-<section class="search-section">
-  <div class="search-label">학교를 선택하세요</div>
-  <div class="school-scroll" id="schoolGrid"></div>
-  <div class="search-row">
-    <input class="search-input" id="searchInput" type="text" placeholder="학교명 직접 입력…">
-    <button class="clear-btn" onclick="clearSelection()">초기화</button>
-  </div>
-</section>
-
-<div class="no-result" id="noResult">
-  <div class="no-result-icon">🔍</div>
-  <div>해당 학교를 찾을 수 없습니다.</div>
+<!-- 로딩 상태 -->
+<div class="loading" id="loadingState">
+  <div class="loading-spinner"></div>
+  데이터를 불러오는 중...
 </div>
 
-<section id="result">
-  <div class="school-hero animate-in">
-    <div class="school-hero-label">선택된 학교</div>
-    <div class="school-hero-name" id="resultSchoolName"></div>
-    <div class="school-hero-sub">부산광역시 · 2026학년도</div>
+<!-- 메인 콘텐츠 (로드 후 표시) -->
+<div id="mainContent" style="display:none">
+
+  <!-- 연도 선택 -->
+  <section class="year-section">
+    <div class="year-label">학년도 선택</div>
+    <div class="year-tabs" id="yearTabs"></div>
+  </section>
+
+  <!-- 학교 선택 -->
+  <section class="search-section">
+    <div class="search-label">학교를 선택하세요</div>
+    <div class="school-scroll" id="schoolGrid"></div>
+    <div class="search-row">
+      <input class="search-input" id="searchInput" type="text" placeholder="학교명 직접 입력…">
+      <button class="clear-btn" onclick="clearSelection()">초기화</button>
+    </div>
+  </section>
+
+  <div class="no-result" id="noResult">
+    <div class="no-result-icon">🔍</div>
+    <div>해당 학교를 찾을 수 없습니다.</div>
   </div>
 
-  <div class="grade-tabs">
-    <button class="grade-tab active" id="tab0" onclick="switchTab(0)">1학년</button>
-    <button class="grade-tab" id="tab1" onclick="switchTab(1)">2학년</button>
-    <button class="grade-tab" id="tab2" onclick="switchTab(2)">3학년</button>
-  </div>
+  <section id="result">
+    <div class="school-hero animate-in">
+      <div class="school-hero-label">선택된 학교</div>
+      <div class="school-hero-name" id="resultSchoolName"></div>
+      <div class="school-hero-sub" id="resultSchoolSub"></div>
+    </div>
 
-  <div id="grade0" class="grade-panel active"></div>
-  <div id="grade1" class="grade-panel"></div>
-  <div id="grade2" class="grade-panel"></div>
+    <div id="yearBadgeWrap"></div>
 
-  <div class="summary-section">
-    <div class="section-heading">전 학년 요약</div>
-    <div class="summary-card"><div id="summaryTable"></div></div>
-  </div>
+    <div class="grade-tabs" id="gradeTabs"></div>
 
-  <div class="legend-section">
-    <div class="section-heading" style="margin-bottom:12px">출판사 범례</div>
-    <div class="legend-grid" id="legendGrid"></div>
-  </div>
-</section>
+    <div id="gradePanels"></div>
 
-<footer class="footer">
-  2026학년도 부산광역시 중학교 교과서 채택 현황 · 학교별 검색 서비스
-</footer>
+    <div class="summary-section">
+      <div class="section-heading">전 학년 요약</div>
+      <div class="summary-card"><div id="summaryTable"></div></div>
+    </div>
+
+    <div class="legend-section">
+      <div class="section-heading" style="margin-bottom:12px">출판사 범례</div>
+      <div class="legend-grid" id="legendGrid"></div>
+    </div>
+  </section>
+
+</div><!-- /mainContent -->
+
+<footer class="footer" id="footerText"></footer>
 
 <script>
-const pubColors = {
-  "천재":   "#2980B9",
-  "미래엔": "#27AE60",
-  "동아":   "#E67E22",
-  "비상":   "#8E44AD",
-  "지학사": "#D4AC0D",
-  "해냄":   "#E74C3C",
-  "능률":   "#16A085",
-  "금성":   "#B7950B",
-  "신사고": "#2471A3",
-  "창비":   "#6C3483",
-  "교학사": "#935116",
-  "교학":   "#935116",
-  "YBM":    "#1A5276",
-  "리베르": "#7D3C98",
-  "씨마스": "#117A65",
-  "길벗":   "#B03A2E",
-  "박영사": "#784212",
-};
+// ── 전역 상태 ──
+let DB = null;
+let currentYear = null;
+let currentSchool = null;
+let currentTab = 0;
 
-const gradeData = {
-  "1학년": {
-    schools: ["구서여중","금양중","금정중","남산중","동래여중","동현중","부곡중","유락여중","장전중"],
-    subjects: ["국어","수학","영어","과학","사회 ①","도덕 ①","기술·가정 ①","정보"],
-    rows: [
-      ["천재(정호웅)","미래엔(신유식)","미래엔(신유식)","천재(노미숙)","해냄(강양희)","미래엔(민병곤)","천재(노미숙)","천재(노미숙)","미래엔(민병곤)"],
-      ["동아(강옥기)","미래엔(황선욱)","비상(이진호)","능률(권오남)","천재(김화경)","천재(김동재)","비상(이진호)","동아(강옥기)","동아(강옥기)"],
-      ["동아(윤정미)","천재(이상기)","동아(윤정미)","동아(이병민)","동아(윤정미)","동아(이병민)","동아(윤정미)","동아(윤정미)","동아(윤정미)"],
-      ["미래엔(김태일)","미래엔(김태일)","미래엔(김태일)","천재(정대홍)","비상(임태훈)","천재(정대홍)","미래엔(김태일)","미래엔(김태일)","천재(정대홍)"],
-      ["미래엔(손영찬)","미래엔(손영찬)","동아(설규주)","미래엔(손영찬)","미래엔(손영찬)","동아(설규주)","미래엔(손영찬)","동아(설규주)","천재(허수미)"],
-      ["미래엔(정창우)","미래엔(정창우)","미래엔(정창우)","동아(노영준)","동아(노영준)","리베르(박병기)","미래엔(정창우)","미래엔(정창우)","—"],
-      ["천재(이춘식)","미래엔(이철현)","금성(민창기)","금성(민창기)","지학사(최유현)","미래엔(이철현)","YBM(문성환)","지학사(최유현)","동아(왕석순)"],
-      ["미래엔(한선관)","비상(임희석)","씨마스(서태원)","비상(임희석)","천재(김현철)","—","비상(임희석)","길벗(김재현)","미래엔(한선관)"],
-    ]
-  },
-  "2학년": {
-    schools: ["구서여중","금양중","금정중","남산중","동래여중","동현중","부곡중","유락여중","장전중"],
-    subjects: ["국어","수학","영어","과학","역사 ①","도덕 ②","기술·가정 ②","정보/한문"],
-    rows: [
-      ["천재(정호웅)","미래엔(신유식)","미래엔(신유식)","천재(노미숙)","해냄(강양희)","미래엔(민병곤)","천재(노미숙)","천재(노미숙)","미래엔(민병곤)"],
-      ["동아(강옥기)","미래엔(황선욱)","비상(이진호)","능률(권오남)","지학사(장경윤)","천재(김동재)","비상(이진호)","동아(강옥기)","동아(강옥기)"],
-      ["동아(윤정미)","천재(이상기)","동아(윤정미)","동아(이병민)","동아(윤정미)","동아(이병민)","동아(윤정미)","동아(윤정미)","동아(윤정미)"],
-      ["미래엔(김태일)","미래엔(김태일)","미래엔(김태일)","천재(정대홍)","비상(임태훈)","천재(정대홍)","미래엔(김태일)","미래엔(김태일)","천재(정대홍)"],
-      ["비상(이병인)","동아(홍성구)","해냄(이성호)","해냄(이성호)","천재(이종관)","비상(이병인)","미래엔(이종대)","미래엔(이종대)","해냄(이성호)"],
-      ["미래엔(정창우)","미래엔(정창우)","—","—","동아(노영준)","리베르(박병기)","미래엔(정창우)","미래엔(정창우)","미래엔(정창우)"],
-      ["천재(이춘식)","미래엔(이철현)","금성(민창기)","금성(민창기)","지학사(최유현)","—","YBM(문성환)","지학사(최유현)","동아(왕석순)"],
-      ["한문:천재(안)","한문:박영사","정보:씨마스","정보:비상","정보:천재","정보:비상(임)","정보:비상(임)","한문:미래엔","한문:천재(안)"],
-    ]
-  },
-  "3학년": {
-    schools: ["구서여중","금양중","금정중","남산중","동래여중","동현중","부곡중","유락여중","장전중"],
-    subjects: ["국어","수학","영어","과학","사회 ②","역사 ②","도덕 ②","기술·가정 ②"],
-    rows: [
-      ["천재(박영목)","천재(박영목)","미래엔(신유식)","미래엔(신유식)","창비(이도영)","비상(김진수)","천재(노미숙)","천재(박영목)","천재(박영목)"],
-      ["신사고(김화경)","비상(김원경)","미래엔(황선옥)","신사고(김화경)","천재(류희찬)","비상(김원경)","신사고(김화경)","동아(강옥기)","천재(류희찬)"],
-      ["동아(윤정미)","동아(이병민)","능률(김성곤)","동아(윤정미)","동아(이병민)","동아(이병민)","동아(윤정미)","동아(윤정미)","미래엔(최연희)"],
-      ["비상(임태훈)","비상(임태훈)","비상(임태훈)","동아(김호련)","비상(임태훈)","비상(임태훈)","천재(노태희)","비상(임태훈)","동아(김호련)"],
-      ["지학사(이진석)","미래엔(김진수)","지학사(이진석)","미래엔(김진수)","비상(최성길)","미래엔(김진수)","비상(최성길)","미래엔(김진수)","미래엔(김진수)"],
-      ["금성(김형중)","천재(김덕수)","미래엔(김태웅)","미래엔(김태웅)","천재(김덕수)","동아(노대환)","금성(김형종)","미래엔(김태웅)","금성(김형종)"],
-      ["—","미래엔(정창우)","교학사(황인표)","비상(박병기)","—","—","—","—","교학사(황인표)"],
-      ["천재(이춘식)","교학(이봉구)","금성(민창기)","지학사(최유현)","지학사(최유현)","천재(이춘식)","YBM(문성환)","—","천재(이춘식)"],
-    ]
+// ── 데이터 로드 ──
+async function loadData() {
+  try {
+    const res = await fetch('data.json');
+    if (!res.ok) throw new Error('fetch failed');
+    DB = await res.json();
+    init();
+  } catch(e) {
+    document.getElementById('loadingState').innerHTML =
+      '<div style="color:#E8562A;padding:40px 24px;text-align:center">⚠️ 데이터를 불러올 수 없습니다.<br><small style="color:#7A8C9A;font-size:12px;margin-top:8px;display:block">data.json 파일을 확인해 주세요</small></div>';
   }
-};
+}
 
-const grades = ["1학년","2학년","3학년"];
-const allSchools = gradeData["1학년"].schools;
+function init() {
+  document.getElementById('loadingState').style.display = 'none';
+  document.getElementById('mainContent').style.display = 'block';
 
+  // 연도 목록 (내림차순 = 최신 먼저)
+  const years = Object.keys(DB.years).sort((a,b) => b - a);
+  currentYear = years[0];
+
+  // 연도 탭 빌드
+  buildYearTabs(years);
+
+  // 출판사 범례
+  buildLegend();
+
+  // 현재 연도로 초기화
+  applyYear(currentYear);
+}
+
+function buildYearTabs(years) {
+  const wrap = document.getElementById('yearTabs');
+  wrap.innerHTML = '';
+  years.forEach((yr, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'year-chip' + (i === 0 ? ' active current-year' : '');
+    btn.textContent = yr + '학년도';
+    btn.dataset.year = yr;
+    btn.onclick = () => selectYear(yr);
+    wrap.appendChild(btn);
+  });
+}
+
+function selectYear(yr) {
+  currentYear = yr;
+  document.querySelectorAll('.year-chip').forEach(b => {
+    b.classList.toggle('active', b.dataset.year === yr);
+  });
+  clearSelection();
+  applyYear(yr);
+}
+
+function applyYear(yr) {
+  const yData = DB.years[yr];
+
+  // 헤더 업데이트
+  document.getElementById('headerTag').textContent = yr + '학년도';
+  document.getElementById('headerSub').textContent =
+    `${DB.meta.district} · ${yData.schools.length}개 중학교 · 전 학년 전 과목`;
+  document.getElementById('footerText').textContent =
+    `${yr}학년도 ${DB.meta.region} 중학교 교과서 채택 현황 · 학교별 검색 서비스`;
+
+  // 학교 버튼 빌드
+  buildSchoolChips(yData.schools);
+
+  // 검색 이벤트 재등록
+  const input = document.getElementById('searchInput');
+  input.oninput = function() {
+    const v = this.value.trim();
+    if (!v) { hideResult(); return; }
+    const match = yData.schools.find(s => s.includes(v));
+    if (match) selectSchool(match);
+    else { document.getElementById('result').style.display = 'none'; document.getElementById('noResult').style.display = 'block'; }
+  };
+}
+
+function buildSchoolChips(schools) {
+  const grid = document.getElementById('schoolGrid');
+  grid.innerHTML = '';
+  schools.forEach(school => {
+    const btn = document.createElement('button');
+    btn.className = 'school-chip';
+    btn.textContent = school;
+    btn.dataset.school = school;
+    btn.onclick = () => selectSchool(school);
+    grid.appendChild(btn);
+  });
+}
+
+function buildLegend() {
+  const grid = document.getElementById('legendGrid');
+  grid.innerHTML = '';
+  Object.entries(DB.pubColors).forEach(([pub, color]) => {
+    const el = document.createElement('div');
+    el.className = 'legend-item';
+    el.innerHTML = `<span class="legend-dot" style="background:${color}"></span>${pub}`;
+    grid.appendChild(el);
+  });
+}
+
+// ── 출판사 파싱 ──
 function getPubKey(val) {
-  if (!val || val === "—") return null;
-  const clean = val.includes(":") ? val.split(":")[1] : val;
+  if (!val || val === '—') return null;
+  const clean = val.includes(':') ? val.split(':')[1] : val;
   const m = clean.match(/^([^\(]+)/);
   const raw = m ? m[1].trim() : clean.trim();
-  for (const key of Object.keys(pubColors)) {
+  for (const key of Object.keys(DB.pubColors)) {
     if (raw.startsWith(key)) return key;
   }
   return raw;
 }
-function getPubName(val) { return getPubKey(val); }
 function getAuthor(val) {
-  if (!val || val === "—") return "";
-  const clean = val.includes(":") ? val.split(":")[1] : val;
+  if (!val || val === '—') return '';
+  const clean = val.includes(':') ? val.split(':')[1] : val;
   const m = clean.match(/\((.+)\)/);
-  return m ? m[1] : "";
+  return m ? m[1] : '';
 }
 function getColor(val) {
   const k = getPubKey(val);
-  if (!k) return "#BBBBBB";
-  return pubColors[k] || "#5D6D7E";
+  if (!k) return '#BBBBBB';
+  return DB.pubColors[k] || '#5D6D7E';
 }
 
-// Build school buttons
-const schoolGrid = document.getElementById("schoolGrid");
-allSchools.forEach(school => {
-  const btn = document.createElement("button");
-  btn.className = "school-chip";
-  btn.textContent = school;
-  btn.dataset.school = school;
-  btn.onclick = () => selectSchool(school);
-  schoolGrid.appendChild(btn);
-});
+// ── 학교 선택 ──
+function selectSchool(school) {
+  currentSchool = school;
+  const yData = DB.years[currentYear];
+  const grades = Object.keys(yData.grades);
 
-// Build legend
-const legendGrid = document.getElementById("legendGrid");
-Object.entries(pubColors).forEach(([pub, color]) => {
-  const el = document.createElement("div");
-  el.className = "legend-item";
-  el.innerHTML = `<span class="legend-dot" style="background:${color}"></span>${pub}`;
-  legendGrid.appendChild(el);
-});
+  document.querySelectorAll('.school-chip').forEach(b =>
+    b.classList.toggle('active', b.dataset.school === school));
+  document.getElementById('searchInput').value = school;
+  document.getElementById('noResult').style.display = 'none';
+  document.getElementById('result').style.display = 'block';
+  document.getElementById('resultSchoolName').textContent = school;
+  document.getElementById('resultSchoolSub').textContent =
+    `${DB.meta.region} · ${currentYear}학년도`;
 
-// Search input
-document.getElementById("searchInput").addEventListener("input", function() {
-  const v = this.value.trim();
-  if (!v) { document.getElementById("result").style.display="none"; document.getElementById("noResult").style.display="none"; return; }
-  const match = allSchools.find(s => s.includes(v));
-  if (match) selectSchool(match);
-  else {
-    document.getElementById("result").style.display = "none";
-    document.getElementById("noResult").style.display = "block";
-  }
-});
+  // 연도 뱃지
+  document.getElementById('yearBadgeWrap').innerHTML =
+    `<div class="year-badge">${currentYear}학년도 채택 현황</div>`;
 
-let currentTab = 0;
-function switchTab(idx) {
-  currentTab = idx;
-  grades.forEach((_, i) => {
-    document.getElementById(`tab${i}`).classList.toggle("active", i === idx);
-    document.getElementById(`grade${i}`).classList.toggle("active", i === idx);
+  // 학년 탭 동적 빌드
+  buildGradeTabs(grades);
+
+  // 각 학년 패널 빌드
+  buildGradePanels(grades, yData, school);
+
+  // 요약 테이블
+  buildSummary(grades, yData, school);
+
+  switchTab(0);
+  window.scrollTo({ top: document.getElementById('result').offsetTop - 16, behavior: 'smooth' });
+}
+
+function buildGradeTabs(grades) {
+  const wrap = document.getElementById('gradeTabs');
+  wrap.innerHTML = '';
+  grades.forEach((g, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'grade-tab' + (i === 0 ? ' active' : '');
+    btn.id = `tab${i}`;
+    btn.textContent = g;
+    btn.onclick = () => switchTab(i);
+    wrap.appendChild(btn);
   });
 }
 
-function selectSchool(school) {
-  document.querySelectorAll(".school-chip").forEach(b => b.classList.toggle("active", b.dataset.school === school));
-  document.getElementById("searchInput").value = school;
-  document.getElementById("noResult").style.display = "none";
-  document.getElementById("result").style.display = "block";
-  document.getElementById("resultSchoolName").textContent = school;
-
+function buildGradePanels(grades, yData, school) {
+  const wrap = document.getElementById('gradePanels');
+  wrap.innerHTML = '';
   grades.forEach((grade, gi) => {
-    const { schools, subjects, rows } = gradeData[grade];
-    const si = schools.indexOf(school);
-    const panel = document.getElementById(`grade${gi}`);
+    const div = document.createElement('div');
+    div.className = 'grade-panel' + (gi === 0 ? ' active' : '');
+    div.id = `grade${gi}`;
+
+    const { subjects, rows } = yData.grades[grade];
+    const si = yData.schools.indexOf(school);
 
     let html = '<div class="subject-list animate-in">';
     subjects.forEach((subj, ri) => {
-      const val = si >= 0 ? (rows[ri][si] || "—") : "—";
-      const pub   = getPubName(val);
+      const val = si >= 0 ? (rows[ri]?.[si] || '—') : '—';
+      const pub   = getPubKey(val);
       const auth  = getAuthor(val);
       const color = getColor(val);
-      const isEmpty = !pub || val === "—";
-      let prefix = "";
-      if (val.includes(":")) prefix = val.split(":")[0] + " · ";
+      const isEmpty = !pub || val === '—';
+      let prefix = '';
+      if (val.includes(':')) prefix = val.split(':')[0] + ' · ';
 
       html += `
         <div class="subject-card">
@@ -602,12 +741,16 @@ function selectSchool(school) {
         </div>`;
     });
     html += '</div>';
-    panel.innerHTML = html;
+    div.innerHTML = html;
+    wrap.appendChild(div);
   });
+}
 
-  // Summary table
+function buildSummary(grades, yData, school) {
   const allSubjects = [];
-  grades.forEach(g => gradeData[g].subjects.forEach(s => { if (!allSubjects.includes(s)) allSubjects.push(s); }));
+  grades.forEach(g => yData.grades[g].subjects.forEach(s => {
+    if (!allSubjects.includes(s)) allSubjects.push(s);
+  }));
 
   let tbl = `<table class="sum-table">
     <thead><tr><th>과목</th>${grades.map(g=>`<th>${g}</th>`).join('')}</tr></thead>
@@ -616,17 +759,16 @@ function selectSchool(school) {
   allSubjects.forEach(subj => {
     tbl += `<tr><td>${subj}</td>`;
     grades.forEach(grade => {
-      const { schools, subjects, rows } = gradeData[grade];
-      const si = schools.indexOf(school);
+      const { subjects, rows } = yData.grades[grade];
+      const si = yData.schools.indexOf(school);
       const ri = subjects.indexOf(subj);
       if (ri < 0) { tbl += `<td style="color:#C5D0D8">—</td>`; return; }
-      const val = si >= 0 ? (rows[ri][si] || "—") : "—";
-      const pub   = getPubName(val);
-      const auth  = getAuthor(val);
+      const val = si >= 0 ? (rows[ri]?.[si] || '—') : '—';
+      const pub   = getPubKey(val);
       const color = getColor(val);
-      const isEmpty = !pub || val === "—";
-      let prefix = "";
-      if (val.includes(":")) prefix = val.split(":")[0] + " · ";
+      const isEmpty = !pub || val === '—';
+      let prefix = '';
+      if (val.includes(':')) prefix = val.split(':')[0] + ' · ';
 
       tbl += isEmpty
         ? `<td style="color:#C5D0D8">—</td>`
@@ -639,18 +781,31 @@ function selectSchool(school) {
   });
 
   tbl += `</tbody></table>`;
-  document.getElementById("summaryTable").innerHTML = tbl;
+  document.getElementById('summaryTable').innerHTML = tbl;
+}
 
-  switchTab(0);
-  window.scrollTo({ top: document.getElementById("result").offsetTop - 16, behavior: "smooth" });
+function switchTab(idx) {
+  currentTab = idx;
+  document.querySelectorAll('.grade-tab').forEach((t, i) =>
+    t.classList.toggle('active', i === idx));
+  document.querySelectorAll('.grade-panel').forEach((p, i) =>
+    p.classList.toggle('active', i === idx));
+}
+
+function hideResult() {
+  document.getElementById('result').style.display = 'none';
+  document.getElementById('noResult').style.display = 'none';
 }
 
 function clearSelection() {
-  document.querySelectorAll(".school-chip").forEach(b => b.classList.remove("active"));
-  document.getElementById("searchInput").value = "";
-  document.getElementById("result").style.display = "none";
-  document.getElementById("noResult").style.display = "none";
+  currentSchool = null;
+  document.querySelectorAll('.school-chip').forEach(b => b.classList.remove('active'));
+  document.getElementById('searchInput').value = '';
+  hideResult();
 }
+
+// ── 시작 ──
+loadData();
 </script>
 </body>
 </html>
