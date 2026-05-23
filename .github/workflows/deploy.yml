@@ -1,0 +1,64 @@
+name: 📚 교과서 데이터 자동 배포
+
+on:
+  push:
+    branches: [ main, master ]
+    paths:
+      - 'data.json'
+      - 'index.html'
+
+  workflow_dispatch:
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true   # Node.js 24 강제 사용
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+
+    concurrency:
+      group: pages
+      cancel-in-progress: true
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: 📥 저장소 체크아웃
+        uses: actions/checkout@v4
+
+      - name: 🔍 data.json 유효성 검사
+        run: |
+          python3 -c "
+          import json, sys
+          try:
+              with open('data.json', 'r', encoding='utf-8') as f:
+                  data = json.load(f)
+              years = list(data.get('years', {}).keys())
+              print(f'✅ 유효한 JSON — 연도: {years}')
+          except Exception as e:
+              print(f'❌ JSON 오류: {e}')
+              sys.exit(1)
+          "
+
+      - name: ⚙️ GitHub Pages 설정
+        uses: actions/configure-pages@v4
+
+      - name: 📦 배포 파일 업로드
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: '.'
+
+      - name: 🚀 GitHub Pages 배포
+        id: deployment
+        uses: actions/deploy-pages@v4
+
+      - name: ✅ 배포 완료 알림
+        run: |
+          echo "✅ 배포 완료: $(TZ='Asia/Seoul' date '+%Y-%m-%d %H:%M:%S') KST"
+          echo "URL: ${{ steps.deployment.outputs.page_url }}"
